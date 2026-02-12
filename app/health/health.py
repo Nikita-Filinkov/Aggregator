@@ -1,7 +1,7 @@
 from typing import Dict, Any
 
 from fastapi import APIRouter, Depends
-from app.health.dependencies import get_provider_client
+from app.dependencies import get_provider_client
 
 router = APIRouter(
     prefix="/health",

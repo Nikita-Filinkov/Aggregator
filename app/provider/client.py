@@ -4,7 +4,7 @@ import requests
 from aiohttp import ClientSession, ClientError, ClientTimeout, ClientConnectorError
 from typing import Optional, Dict, Any, List
 
-from app.clients.exceptions import EventsProviderError
+from app.exceptions import EventsProviderError
 
 
 class EventsProviderClient:
@@ -21,7 +21,7 @@ class EventsProviderClient:
 
         self.max_retries: int = 3
         self.backoff_factor: float = 0.5
-        self.retry_exceptions: tuple = (ClientError, ClientTimeout)
+        self.retry_exceptions: tuple = (ClientError, asyncio.TimeoutError, ConnectionError)
 
     async def _sleep_with_backoff(self, attempt: int):
         """Экспоненциальная задержка перед повторной попыткой"""
@@ -80,6 +80,7 @@ class EventsProviderClient:
                 await self._sleep_with_backoff(attempt)
 
     async def check_availability(self):
+        """Проверка доступности API"""
         session = await self._get_session()
         try:
             async with session.get(self.base_url) as response:
@@ -93,12 +94,14 @@ class EventsProviderClient:
     async def get_events_page(
         self, changed_at: str = "2000-01-01", url: Optional[str] = None
     ) -> Dict[str, Any]:
+        """Получение событий на одной страницы"""
         params = {"changed_at": changed_at}
         if not url:
             url = f"{self.base_url}/api/events/"
         return await self._request("GET", url, params=params)
 
     async def get_event_seats(self, event_id: str) -> List[str]:
+        """Получить список свободных мест для события"""
         url = f"{self.base_url}/api/events/{event_id}/seats/"
         data = await self._request("GET", url)
         return data.get("seats", [])
@@ -106,9 +109,7 @@ class EventsProviderClient:
     def register(
         self, event_id: str, first_name: str, last_name: str, email: str, seat: str
     ) -> Dict[str, str]:
-        """
-        Синхронная регистрация участника
-        """
+        """Синхронная регистрация участника"""
         url = f"{self.base_url}/api/tickets"
         payload = {
             "event_id": event_id,
@@ -132,9 +133,7 @@ class EventsProviderClient:
         event_id: str,
         ticket_id: str,
     ) -> Dict[str, bool]:
-        """
-        Асинхронная отмена регистрации
-        """
+        """Асинхронная отмена регистрации"""
         url = f"{self.base_url}/api/events/{event_id}/unregister/"
         payload = {"ticket_id": ticket_id}
         return await self._request("DELETE", url, json=payload)
