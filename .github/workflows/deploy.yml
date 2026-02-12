@@ -53,15 +53,16 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
-
+    env:
+      HEALTH_URL: ${{ secrets.HEALTH_URL }}
     steps:
       - name: Send deploy request
         run: |
           HTTP_CODE=$(curl -s -o response.txt -w "%{http_code}" -X POST \
-            -H "Content-Type: application/json" \
-            -H "X-API-Key: ${{ secrets.LMS_API_KEY }}" \
-            -d '{"image":"ghcr.io/${{ needs.build.outputs.repo }}:${{ github.sha }}","repository":"${{ github.repository }}"}' \
-            https://lms.python-labs.ru/api/deploy-requests)
+          -H "Content-Type: application/json" \
+          -H "X-API-Key: ${{ secrets.LMS_API_KEY }}" \
+          -d '{"image":"ghcr.io/${{ needs.build.outputs.repo }}:${{ github.sha }}","repository":"${{ github.repository }}"}' \
+          https://lms.python-labs.ru/api/deploy-requests)
 
           if [ "$HTTP_CODE" != "200" ]; then
             echo "Deployment failed with status code $HTTP_CODE"

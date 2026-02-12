@@ -1,9 +1,7 @@
-from typing import Dict
+from typing import Dict, Any
 
-from fastapi import APIRouter
-from aiohttp import ClientSession, ClientTimeout, ClientConnectorError
-
-from app.config import settings
+from fastapi import APIRouter, Depends
+from app.health.dependencies import get_provider_client
 
 router = APIRouter(
     prefix="/health",
@@ -11,15 +9,7 @@ router = APIRouter(
 )
 
 
-@router.get("/health")
-async def health_check() -> Dict[str, str]:
-    timeout = ClientTimeout(total=10, connect=5)
-    async with ClientSession(timeout=timeout) as session:
-        try:
-            async with session.get(settings.HEALTH_URL) as response:
-                status = response.status
-                if status == 200:
-                    return {"status": "ok"}
-                return {"status": "fault"}
-        except (ClientConnectorError, ClientTimeout):
-            return {"status": "fault"}
+@router.get("/")
+async def health_check(client=Depends(get_provider_client)) -> Dict[str, Any]:
+    async with client:
+        return await client.check_availability()
