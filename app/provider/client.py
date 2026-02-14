@@ -98,7 +98,7 @@ class EventsProviderClient:
     async def get_events_page(
         self, changed_at: str = "2000-01-01", url: Optional[str] = None
     ) -> Dict[str, Any]:
-        """Получение событий на одной страницы"""
+        """Получение событий на одной странице"""
         params = {"changed_at": changed_at}
         if not url:
             url = f"{self.base_url}/api/events/"

@@ -22,9 +22,7 @@ AsyncSessionLocal = async_sessionmaker(
 
 
 async def get_async_db() -> AsyncGenerator[AsyncSession, None]:
-    """
-    Асинхронная зависимость для получения сессии БД
-    """
+    """Асинхронная зависимость для получения сессии БД"""
     async with AsyncSessionLocal() as session:
         try:
             yield session

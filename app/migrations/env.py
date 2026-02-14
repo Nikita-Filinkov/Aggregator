@@ -11,7 +11,8 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from alembic import context
 from app.config import settings
 from app.database import Base
-from app.models.models import SyncMetadata, Place, Event, Ticket  # noqa
+from app.aggregator.models import Place, Event, Ticket  # noqa
+from app.sync.models import SyncMetadata  # noqa
 
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
