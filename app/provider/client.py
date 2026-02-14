@@ -21,7 +21,11 @@ class EventsProviderClient:
 
         self.max_retries: int = 3
         self.backoff_factor: float = 0.5
-        self.retry_exceptions: tuple = (ClientError, asyncio.TimeoutError, ConnectionError)
+        self.retry_exceptions: tuple = (
+            ClientError,
+            asyncio.TimeoutError,
+            ConnectionError,
+        )
 
     async def _sleep_with_backoff(self, attempt: int):
         """Экспоненциальная задержка перед повторной попыткой"""
@@ -110,7 +114,7 @@ class EventsProviderClient:
         self, event_id: str, first_name: str, last_name: str, email: str, seat: str
     ) -> Dict[str, str]:
         """Синхронная регистрация участника"""
-        url = f"{self.base_url}/api/tickets"
+        url = f"{self.base_url}/api/events/{event_id}/register/"
         payload = {
             "event_id": event_id,
             "first_name": first_name,
