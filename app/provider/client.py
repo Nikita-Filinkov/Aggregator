@@ -4,7 +4,7 @@ import requests
 from aiohttp import ClientSession, ClientError, ClientTimeout, ClientConnectorError
 from typing import Optional, Dict, Any, List
 
-from app.exceptions import EventsProviderError
+from app.provider.exceptions import EventsProviderError
 
 
 class EventsProviderClient:
@@ -72,13 +72,13 @@ class EventsProviderClient:
 
                     raise EventsProviderError(
                         status=status_code,
-                        message=resp.reason or "Unexpected status",
+                        message=resp.reason or "Неожиданный статус",
                     )
             except self.retry_exceptions as e:
                 if attempt == self.max_retries:
                     raise EventsProviderError(
                         status=0,
-                        message=f"Network error after {self.max_retries} retries: {e}",
+                        message=f"Ошибка сети после {self.max_retries} попыток: {e}",
                     )
                 # Логи
                 await self._sleep_with_backoff(attempt)
@@ -92,7 +92,7 @@ class EventsProviderClient:
                 if status == 200:
                     return {"status": "ok"}
                 return {"status": "fault"}
-        except (ClientConnectorError, ClientTimeout):
+        except (ClientConnectorError, asyncio.TimeoutError):
             return {"status": "fault"}
 
     async def get_events_page(
@@ -129,7 +129,7 @@ class EventsProviderClient:
         else:
             raise EventsProviderError(
                 status=response.status_code,
-                message=f"Registration failed (HTTP {response.status_code}):",
+                message=f"Регистрация не выполнена (HTTP {response.status_code}):",
             )
 
     async def unregister(
@@ -143,11 +143,13 @@ class EventsProviderClient:
         return await self._request("DELETE", url, json=payload)
 
     async def close(self):
+        """Синхронное закрытие сессии"""
         if self._session and not self._session.closed:
             await self._session.close()
             self._session = None
 
     def close_sync(self):
+        """Асинхронное закрытие сессии"""
         self._sync_session.close()
 
     async def __aenter__(self):

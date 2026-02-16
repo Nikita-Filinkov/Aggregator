@@ -1,13 +1,13 @@
+import asyncio
 from datetime import datetime
 from typing import Optional
 from app.provider.client import EventsProviderClient
 from app.provider.paginator import EventsPaginator
-from app.aggregator.repository import (
-    PlaceRepository,
-    EventRepository,
-)
+from app.aggregator.events.repository import EventRepository
+from app.aggregator.places.repository import PlaceRepository
 from app.sync.repository import SyncMetadataRepository
-from app.aggregator.models import Place, Event
+from app.aggregator.events.models import Event
+from app.aggregator.places.models import Place
 
 
 class SyncEventsUsecase:
@@ -24,25 +24,17 @@ class SyncEventsUsecase:
         self.sync_repo = sync_repo
 
     async def execute(self, forced_changed_at: Optional[str] = None) -> None:
-        """Запуск синхронизации. Если forced_changed_at не передан, берём из БД."""
-        # Лог - начала
+        """Запуск синхронизации. Если forced_changed_at не передан, берём из БД"""
+
         try:
+            meta = await self.sync_repo.get()
             if forced_changed_at:
                 changed_at = forced_changed_at
             else:
-                meta = await self.sync_repo.get()
                 if meta and meta.last_changed_at:
                     changed_at = meta.last_changed_at.date().isoformat()
                 else:
-                    await self.sync_repo.create(
-                        sync_status="pending", last_sync_at=None, last_changed_at=None
-                    )
                     changed_at = "2000-01-01"
-
-            await self.sync_repo.update(
-                sync_status="in_progress",
-                last_sync_at=datetime.now(),
-            )
 
             max_changed_at = None
 
@@ -50,25 +42,35 @@ class SyncEventsUsecase:
                 async for event_data in EventsPaginator(
                     self.client, changed_at=changed_at
                 ):
-                    await self._process_event(event_data)
                     event_changed = datetime.fromisoformat(event_data["changed_at"])
+
+                    if meta and meta.last_changed_at:
+                        if event_changed <= meta.last_changed_at:
+                            continue
+
+                    await self._process_event(event_data)
+
                     if max_changed_at is None or event_changed > max_changed_at:
                         max_changed_at = event_changed
 
             await self.place_repo.session.commit()
-            await self.sync_repo.update(
-                last_changed_at=max_changed_at,
-                sync_status="success",
+            # Лог - # Лог - Синхронизация выполнена
+            print("📤 Вызов release_lock с success=True")
+            await self.sync_repo.release_lock(
+                success=True, last_changed_at=max_changed_at
             )
-            await self.sync_repo.session.commit()
-            # Лог - конец
+            print("✅ release_lock выполнен")
+            # Лог - Синхронизация уже выполняется
         except Exception as e:
-            # Лог ошибок
-            await self.sync_repo.update(sync_status="failed")
+            # logger.exception("Ошибка во время синхронизации")
+            await self.sync_repo.release_lock(success=False)
             raise
 
     async def _process_event(self, event_data: dict) -> None:
         """Сохранение площадки и события"""
+
+        print(f"🔥 _process_event: {event_data.get('id')}")
+        await asyncio.sleep(0.5)
         place_data = event_data["place"]
         place = await self.place_repo.get(place_data["id"])
         if not place:

@@ -7,10 +7,11 @@ from app.dependencies import (
     get_sync_repo,
 )
 from app.provider.client import EventsProviderClient
-from app.aggregator.repository import PlaceRepository, EventRepository
+from app.aggregator.events.repository import EventRepository
+from app.aggregator.places.repository import PlaceRepository
 from app.sync.repository import SyncMetadataRepository
 
-from app.usecases.sync_events import SyncEventsUsecase
+from app.sync.usecase import SyncEventsUsecase
 
 
 async def get_sync_usecase(
