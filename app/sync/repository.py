@@ -4,6 +4,7 @@ from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
 from app.sync.models import SyncMetadata
+from app.logger import logger
 
 
 class SyncMetadataRepository:
@@ -50,8 +51,12 @@ class SyncMetadataRepository:
         self, success: bool, last_changed_at: Optional[datetime] = None
     ) -> None:
         """Снять блокировку после синхронизации"""
-        print(
-            f"🔓 release_lock called with success={success}, last_changed_at={last_changed_at}"
+        logger.info(
+            "Снятие блокировки",
+            extra={
+                "success": success,
+                "last_changed_at": str(last_changed_at) if last_changed_at else None,
+            },
         )
         if success:
             await self.update(
@@ -61,20 +66,23 @@ class SyncMetadataRepository:
         else:
             await self.update(sync_status="failed")
         await self.session.commit()
-        print("🔓 release_lock completed")
+        logger.info("Блокировка успешно снята")
 
     async def get(self) -> Optional[SyncMetadata]:
+        """Не блокирующие получение метаданных"""
         result = await self.session.execute(
             select(SyncMetadata).where(SyncMetadata.id == 1)
         )
         return result.scalar_one_or_none()
 
     async def update(self, **kwargs) -> None:
+        """Обновление метаданных"""
         query = update(SyncMetadata).where(SyncMetadata.id == 1).values(**kwargs)
         await self.session.execute(query)
         await self.session.commit()
 
     async def create(self, **kwargs) -> SyncMetadata:
+        """Первичное создание строки метаданных"""
         meta = SyncMetadata(id=1, **kwargs)
         self.session.add(meta)
         await self.session.commit()

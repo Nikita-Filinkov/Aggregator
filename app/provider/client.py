@@ -67,7 +67,6 @@ class EventsProviderClient:
                         if attempt == self.max_retries:
                             raise EventsProviderError(status_code, resp.reason)
                         await self._sleep_with_backoff(attempt)
-                        # Логи
                         continue
 
                     raise EventsProviderError(
@@ -80,7 +79,6 @@ class EventsProviderClient:
                         status=0,
                         message=f"Ошибка сети после {self.max_retries} попыток: {e}",
                     )
-                # Логи
                 await self._sleep_with_backoff(attempt)
 
     async def check_availability(self):

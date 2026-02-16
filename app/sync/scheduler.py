@@ -9,45 +9,32 @@ from app.dependencies import (
     get_sync_repo,
 )
 from app.sync.deps import get_sync_usecase
+from app.logger import logger
 
 scheduler = AsyncIOScheduler()
 
 
-# async def sync_job() -> None:
-#     """Фоновая задача синхронизации"""
-#
-#     async for session in get_async_db():
-#         sync_repo = await get_sync_repo(session)
-#
-#         locked, last_date = await sync_repo.acquire_lock()
-#         if not locked:
-#             return
-#
-#         try:
-#             usecase = await get_sync_usecase(
-#                 client=get_provider_client(),
-#                 place_repo=await get_place_repo(session),
-#                 event_repo=await get_event_repo(session),
-#                 sync_repo=sync_repo,
-#             )
-#             await usecase.execute()
-#         except Exception as e:
-#             raise
 async def sync_job() -> None:
     """Фоновая задача синхронизации"""
-    print("⏰⏰⏰ SYNC_JOB НАЧАЛА ⏰⏰⏰")
+    logger.info("Запуск фоновой задачи синхронизации")
     try:
         async for session in get_async_db():
-            print("📦 Сессия получена")
+            logger.debug("Сессия БД получена")
             sync_repo = await get_sync_repo(session)
-            print("🔒 Пытаемся захватить блокировку...")
+            logger.debug("Попытка захвата блокировки")
             locked, last_date = await sync_repo.acquire_lock()
-            print(f"🔒 Результат блокировки: locked={locked}, last_date={last_date}")
+            logger.info(
+                "Результат захвата блокировки",
+                extra={
+                    "locked": locked,
+                    "last_date": str(last_date) if last_date else None,
+                },
+            )
             if not locked:
-                print("⏳ Синхронизация уже выполняется, выходим")
+                logger.info("Синхронизация уже выполняется, выходим")
                 return
 
-            print("🚀 Запускаем usecase...")
+            logger.info("Запуск usecase синхронизации")
             try:
                 usecase = await get_sync_usecase(
                     client=get_provider_client(),
@@ -56,34 +43,34 @@ async def sync_job() -> None:
                     sync_repo=sync_repo,
                 )
                 await usecase.execute()
-                print("✅ Синхронизация завершена")
+                logger.info("Синхронизация успешно завершена")
             except Exception as e:
-                print(f"❌ Ошибка в usecase: {e}")
+                logger.exception(
+                    "Ошибка при выполнении usecase", extra={"error": str(e)}
+                )
                 raise
     except Exception as e:
-        print(f"❌❌❌ КРИТИЧЕСКАЯ ОШИБКА В JOB: {e}")
-        import traceback
-
-        traceback.print_exc()
+        logger.exception(
+            "Критическая ошибка в фоновой задаче синхронизации", extra={"error": str(e)}
+        )
 
 
 def start_scheduler() -> None:
     """Старт планировщика"""
-    print("🚀 ЗАПУСК ПЛАНИРОВЩИКА!")
+    logger.info("Запуск планировщика")
     scheduler.add_job(
         sync_job,
         trigger=IntervalTrigger(days=1),
-        # trigger=IntervalTrigger(seconds=60),
         id="daily_sync",
         replace_existing=True,
         misfire_grace_time=3600,
     )
     scheduler.start()
-    print(f"✅ Планировщик запущен. Jobs: {scheduler.get_jobs()}")
-    # logger.info("Планировщик фоновой синхронизации запущен")
+    jobs = scheduler.get_jobs()
+    logger.info("Планировщик запущен", extra={"jobs_count": len(jobs)})
 
 
 def shutdown_scheduler() -> None:
     """Остановка планировщика"""
     scheduler.shutdown()
-    # logger.info("Планировщик остановлен")
+    logger.info("Планировщик остановлен")

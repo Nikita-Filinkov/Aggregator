@@ -1,6 +1,7 @@
 import asyncio
 from datetime import datetime
 from typing import Optional
+
 from app.provider.client import EventsProviderClient
 from app.provider.paginator import EventsPaginator
 from app.aggregator.events.repository import EventRepository
@@ -8,6 +9,7 @@ from app.aggregator.places.repository import PlaceRepository
 from app.sync.repository import SyncMetadataRepository
 from app.aggregator.events.models import Event
 from app.aggregator.places.models import Place
+from app.logger import logger
 
 
 class SyncEventsUsecase:
@@ -24,8 +26,6 @@ class SyncEventsUsecase:
         self.sync_repo = sync_repo
 
     async def execute(self, forced_changed_at: Optional[str] = None) -> None:
-        """Запуск синхронизации. Если forced_changed_at не передан, берём из БД"""
-
         try:
             meta = await self.sync_repo.get()
             if forced_changed_at:
@@ -54,23 +54,24 @@ class SyncEventsUsecase:
                         max_changed_at = event_changed
 
             await self.place_repo.session.commit()
-            # Лог - # Лог - Синхронизация выполнена
-            print("📤 Вызов release_lock с success=True")
+            logger.info(
+                "release_lock вызван",
+                extra={"success": True, "last_changed_at": str(max_changed_at)},
+            )
             await self.sync_repo.release_lock(
                 success=True, last_changed_at=max_changed_at
             )
-            print("✅ release_lock выполнен")
-            # Лог - Синхронизация уже выполняется
+            logger.info("release_lock выполнен")
+
         except Exception as e:
-            # logger.exception("Ошибка во время синхронизации")
+            logger.exception("Ошибка синхронизации", extra={"error": str(e)})
             await self.sync_repo.release_lock(success=False)
             raise
 
     async def _process_event(self, event_data: dict) -> None:
-        """Сохранение площадки и события"""
-
-        print(f"🔥 _process_event: {event_data.get('id')}")
+        logger.debug("Обработка события", extra={"event_id": str(event_data.get("id"))})
         await asyncio.sleep(0.5)
+
         place_data = event_data["place"]
         place = await self.place_repo.get(place_data["id"])
         if not place:
@@ -83,12 +84,27 @@ class SyncEventsUsecase:
                 changed_at=datetime.fromisoformat(place_data["changed_at"]),
                 created_at=datetime.fromisoformat(place_data["created_at"]),
             )
+            logger.debug(
+                "Создана новая площадка",
+                extra={
+                    "place_id": str(place_data["id"]),
+                    "place_name": place_data["name"],
+                },
+            )
         else:
             place.name = place_data["name"]
             place.city = place_data["city"]
             place.address = place_data["address"]
             place.seats_pattern = place_data["seats_pattern"]
             place.changed_at = datetime.fromisoformat(place_data["changed_at"])
+            logger.debug(
+                "Обновлена площадка",
+                extra={
+                    "place_id": str(place_data["id"]),
+                    "place_name": place_data["name"],
+                },
+            )
+
         await self.place_repo.save(place)
 
         event = await self.event_repo.get(event_data["id"])
@@ -111,6 +127,14 @@ class SyncEventsUsecase:
                 if event_data.get("status_changed_at")
                 else None,
             )
+            logger.debug(
+                "Создано новое событие",
+                extra={
+                    "event_id": str(event_data["id"]),
+                    "place_id": str(place_data["id"]),
+                    "status": event_data["status"],
+                },
+            )
         else:
             event.name = event_data["name"]
             event.place_id = place_data["id"]
@@ -126,4 +150,13 @@ class SyncEventsUsecase:
                 if event_data.get("status_changed_at")
                 else None
             )
+            logger.debug(
+                "Обновлено событие",
+                extra={
+                    "event_id": str(event_data["id"]),
+                    "place_id": str(place_data["id"]),
+                    "status": event_data["status"],
+                },
+            )
+
         await self.event_repo.save(event)

@@ -16,7 +16,7 @@ from app.aggregator.exceptions import (
     ProviderNetworkError,
     ProviderUnexpectedResponse,
 )
-from fastapi import HTTPException, status
+from fastapi import HTTPException
 
 from app.provider.exceptions import EventsProviderError
 
@@ -52,17 +52,17 @@ class CreateTicketUsecase:
             timezone.utc
         ):
             raise EventPassed
-
         try:
             available = await self.client.get_event_seats(str(event_id))
             if seat not in available:
                 raise TicketUnRegistrationError(f"Место {seat} недоступно")
+
         except TicketUnRegistrationError:
-            # Лог - не удалось получить список мест
             raise
-        except Exception as e:
-            # logger.exception("Неожиданная ошибка при проверке мест")
+
+        except Exception:
             raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
+
         try:
             response = await asyncio.to_thread(
                 self.client.register,
@@ -73,22 +73,20 @@ class CreateTicketUsecase:
                 seat=seat,
             )
         except EventsProviderError as e:
-            # logger.error(f"Ошибка провайдера при регистрации: {e.status} {e.message}")
             raise TicketUnRegistrationError(
                 "Ошибка регистрации. Возможно, место уже занято."
             )
         except (ClientConnectorError, asyncio.TimeoutError) as e:
-            # logger.error(f"Сетевая ошибка при регистрации: {e}")
             raise ProviderNetworkError()
-        except Exception as e:
-            # logger.exception("Неожиданная ошибка при регистрации")
+
+        except Exception:
             raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
+
         ticket_id_str = response.get("ticket_id")
         if not ticket_id_str:
             raise TicketUnRegistrationError("Неверный ответ от провайдера")
-            # Лог - не верный ответ от провайдера
-        ticket_id = UUID(ticket_id_str)
 
+        ticket_id = UUID(ticket_id_str)
         ticket = Ticket(
             ticket_id=ticket_id,
             event_id=event_id,
@@ -136,14 +134,14 @@ class CancelTicketUsecase:
             )
             if not response.get("success"):
                 raise ProviderUnexpectedResponse()
-        except EventsProviderError as e:
-            # logger.error(f"Ошибка провайдера при отмене: {e.status} {e.message}")
+
+        except EventsProviderError:
             raise TicketUnRegistrationError("Не удалось отменить регистрацию")
-        except (ClientConnectorError, asyncio.TimeoutError) as e:
-            # logger.error(f"Сетевая ошибка при отмене: {e}")
+
+        except (ClientConnectorError, asyncio.TimeoutError):
             raise ProviderNetworkError()
-        except Exception as e:
-            # logger.exception("Неожиданная ошибка при отмене")
+
+        except Exception:
             raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
 
         await self.ticket_repo.delete_by_ticket_id(

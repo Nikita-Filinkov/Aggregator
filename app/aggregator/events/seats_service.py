@@ -24,15 +24,14 @@ async def get_available_seats(
 
     try:
         seats = await client.get_event_seats(event_id)
-    except (ClientConnectorError, asyncio.TimeoutError) as e:
-        # logger.warning(f"Сетевая ошибка при получении мест для {event_id}: {e}")
+    except (ClientConnectorError, asyncio.TimeoutError):
         raise
-    except EventsProviderError as e:
-        # logger.warning(f"Ошибка провайдера при получении мест для {event_id}: {e.status} {e.message}")
+
+    except EventsProviderError:
         raise
-    except Exception as e:
-        # logger.exception(f"Неожиданная ошибка при получении мест для {event_id}")
-        raise  # Пробрасываем, чтобы не скрывать баги
+
+    except Exception:
+        raise
 
     async with _cache_lock:
         _seats_cache[event_id] = (time.time(), seats)

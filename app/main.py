@@ -6,16 +6,16 @@ from app.health.router import router as router_health
 from app.sync.router import router as router_sync
 from app.aggregator.events.router import router as event_router
 from app.aggregator.tickets.router import router as router_tickets
-
+from app.logger import logger
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("🔥 Приложение запускается...")
+    logger.info("🔥 Приложение запускается...")
     start_scheduler()
     print("✅ Приложение запустилось")
     yield
     shutdown_scheduler()
-    print("🛑 Приложение останавливается...")
+    logger.info("🛑 Приложение останавливается...")
 
 
 app = FastAPI(prefix="/api", lifespan=lifespan)

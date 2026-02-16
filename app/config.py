@@ -8,6 +8,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     BASE_URL: str
     LMS_API_KEY: str
+    LOG_LEVEL: str = "INFO"
 
     POSTGRES_DATABASE_NAME: str
     POSTGRES_HOST: str
