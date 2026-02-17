@@ -1,12 +1,12 @@
 from fastapi import Depends
-from app.config import settings
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.provider.client import EventsProviderClient
+
 from app.aggregator.events.repository import EventRepository
 from app.aggregator.places.repository import PlaceRepository
 from app.aggregator.tickets.repository import TicketRepository
-
+from app.config import settings
 from app.database import get_async_db
+from app.provider.client import EventsProviderClient
 from app.sync.repository import SyncMetadataRepository
 
 

@@ -3,13 +3,13 @@ from uuid import UUID
 from fastapi import APIRouter, Depends
 
 from app.aggregator.events.dependencies import get_url_builder
-from app.aggregator.events.seats_service import get_available_seats
-from app.aggregator.events.schemas import (
-    EventListResponse,
-    EventListParams,
-    EventDetailOut,
-)
 from app.aggregator.events.repository import EventRepository
+from app.aggregator.events.schemas import (
+    EventDetailOut,
+    EventListParams,
+    EventListResponse,
+)
+from app.aggregator.events.seats_service import get_available_seats
 from app.aggregator.exceptions import EventNotFoundException, EventNotPublished
 from app.aggregator.places.schemas import SeatsResponse
 from app.dependencies import get_event_repo, get_provider_client

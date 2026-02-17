@@ -2,16 +2,16 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends
 
-from app.dependencies import get_provider_client, get_event_repo, get_ticket_repo
-from app.provider.client import EventsProviderClient
 from app.aggregator.events.repository import EventRepository
 from app.aggregator.tickets.repository import TicketRepository
 from app.aggregator.tickets.schemas import (
+    TicketCancelResponse,
     TicketCreateRequest,
     TicketCreateResponse,
-    TicketCancelResponse,
 )
-from app.aggregator.tickets.usecase import CreateTicketUsecase, CancelTicketUsecase
+from app.aggregator.tickets.usecase import CancelTicketUsecase, CreateTicketUsecase
+from app.dependencies import get_event_repo, get_provider_client, get_ticket_repo
+from app.provider.client import EventsProviderClient
 
 router = APIRouter(prefix="/tickets", tags=["tickets"])
 

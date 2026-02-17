@@ -1,10 +1,10 @@
-from datetime import datetime, date
-from uuid import UUID
+from datetime import date, datetime
 from typing import List, Optional
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.aggregator.places.schemas import PlaceOut, PlaceDetailOut
+from app.aggregator.places.schemas import PlaceDetailOut, PlaceOut
 
 
 class EventOut(BaseModel):

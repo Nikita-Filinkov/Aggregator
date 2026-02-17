@@ -1,9 +1,10 @@
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
 from aiohttp import ClientSession
-from unittest.mock import AsyncMock, MagicMock, patch
 from requests import Response
 
-from app.provider.client import EventsProviderError, EventsProviderClient
+from app.provider.client import EventsProviderClient, EventsProviderError
 
 
 @pytest.mark.asyncio

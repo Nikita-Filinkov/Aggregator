@@ -1,15 +1,14 @@
-import asyncio
 from datetime import datetime
 from typing import Optional
 
+from app.aggregator.events.models import Event
+from app.aggregator.events.repository import EventRepository
+from app.aggregator.places.models import Place
+from app.aggregator.places.repository import PlaceRepository
+from app.logger import logger
 from app.provider.client import EventsProviderClient
 from app.provider.paginator import EventsPaginator
-from app.aggregator.events.repository import EventRepository
-from app.aggregator.places.repository import PlaceRepository
 from app.sync.repository import SyncMetadataRepository
-from app.aggregator.events.models import Event
-from app.aggregator.places.models import Place
-from app.logger import logger
 
 
 class SyncEventsUsecase:

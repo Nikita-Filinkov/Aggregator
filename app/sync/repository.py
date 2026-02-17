@@ -1,10 +1,11 @@
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
-from app.sync.models import SyncMetadata
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.logger import logger
+from app.sync.models import SyncMetadata
 
 
 class SyncMetadataRepository:

@@ -1,6 +1,7 @@
-from typing import Dict, Any
+from typing import Any, Dict
 
 from fastapi import APIRouter, Depends
+
 from app.dependencies import get_provider_client
 
 router = APIRouter(

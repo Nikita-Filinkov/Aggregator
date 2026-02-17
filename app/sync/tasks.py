@@ -1,11 +1,11 @@
 from app.database import get_async_db
-from app.sync.usecase import SyncEventsUsecase
 from app.dependencies import (
-    get_provider_client,
-    get_place_repo,
     get_event_repo,
+    get_place_repo,
+    get_provider_client,
     get_sync_repo,
 )
+from app.sync.usecase import SyncEventsUsecase
 
 
 async def run_sync_task():

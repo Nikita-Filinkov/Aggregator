@@ -1,14 +1,17 @@
 import uuid
 from datetime import datetime
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import String, Integer, DateTime, ForeignKey
+from sqlalchemy import DateTime, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.aggregator.tickets.models import Ticket
 from app.database import Base
 
-from app.aggregator.tickets.models import Ticket
+if TYPE_CHECKING:
+    from app.aggregator.places.models import Place  # для аннотаций
+    from app.aggregator.tickets.models import Ticket
 
 
 class Event(Base):

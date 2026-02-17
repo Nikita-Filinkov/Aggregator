@@ -1,9 +1,10 @@
 from datetime import date
 from typing import Optional
 
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload
+
 from app.aggregator.events.models import Event
 
 

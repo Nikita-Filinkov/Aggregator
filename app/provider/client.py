@@ -1,8 +1,8 @@
 import asyncio
-import requests
+from typing import Any, Dict, List, Optional
 
-from aiohttp import ClientSession, ClientError, ClientTimeout, ClientConnectorError
-from typing import Optional, Dict, Any, List
+import requests
+from aiohttp import ClientConnectorError, ClientError, ClientSession, ClientTimeout
 
 from app.provider.exceptions import EventsProviderError
 

@@ -1,16 +1,15 @@
 from fastapi import Depends
 
+from app.aggregator.events.repository import EventRepository
+from app.aggregator.places.repository import PlaceRepository
 from app.dependencies import (
-    get_provider_client,
-    get_place_repo,
     get_event_repo,
+    get_place_repo,
+    get_provider_client,
     get_sync_repo,
 )
 from app.provider.client import EventsProviderClient
-from app.aggregator.events.repository import EventRepository
-from app.aggregator.places.repository import PlaceRepository
 from app.sync.repository import SyncMetadataRepository
-
 from app.sync.usecase import SyncEventsUsecase
 
 

@@ -5,7 +5,6 @@ from app.database import get_async_db
 from app.dependencies import get_sync_repo
 from app.sync.tasks import run_sync_task
 
-
 router = APIRouter(prefix="/sync", tags=["sync"])
 
 

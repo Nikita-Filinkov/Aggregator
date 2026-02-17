@@ -1,5 +1,6 @@
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 from aiohttp import ClientResponse, ClientSession
 
 from app.provider.client import EventsProviderClient

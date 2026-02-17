@@ -2,9 +2,9 @@ import asyncio
 import time
 from typing import Dict, List, Tuple
 
-from app.provider.client import EventsProviderClient
 from aiohttp import ClientConnectorError
 
+from app.provider.client import EventsProviderClient
 from app.provider.exceptions import EventsProviderError
 
 _seats_cache: Dict[str, Tuple[float, List[str]]] = {}

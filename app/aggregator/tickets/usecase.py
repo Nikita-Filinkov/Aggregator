@@ -1,23 +1,23 @@
 import asyncio
 from datetime import datetime, timezone
 from uuid import UUID
+
 from aiohttp import ClientConnectorError
+from fastapi import HTTPException
 
 from app.aggregator.events.repository import EventRepository
-from app.aggregator.tickets.repository import TicketRepository
-from app.aggregator.tickets.models import Ticket
-from app.provider.client import EventsProviderClient
 from app.aggregator.exceptions import (
     EventNotFoundException,
     EventNotPublished,
     EventPassed,
-    TicketNotFoundException,
-    TicketUnRegistrationError,
     ProviderNetworkError,
     ProviderUnexpectedResponse,
+    TicketNotFoundException,
+    TicketUnRegistrationError,
 )
-from fastapi import HTTPException
-
+from app.aggregator.tickets.models import Ticket
+from app.aggregator.tickets.repository import TicketRepository
+from app.provider.client import EventsProviderClient
 from app.provider.exceptions import EventsProviderError
 
 
@@ -72,11 +72,11 @@ class CreateTicketUsecase:
                 email=email,
                 seat=seat,
             )
-        except EventsProviderError as e:
+        except EventsProviderError:
             raise TicketUnRegistrationError(
                 "Ошибка регистрации. Возможно, место уже занято."
             )
-        except (ClientConnectorError, asyncio.TimeoutError) as e:
+        except (ClientConnectorError, asyncio.TimeoutError):
             raise ProviderNetworkError()
 
         except Exception:
