@@ -70,7 +70,6 @@ class SyncEventsUsecase:
 
     async def _process_event(self, event_data: dict) -> None:
         logger.debug("Обработка события", extra={"event_id": str(event_data.get("id"))})
-        await asyncio.sleep(0.5)
 
         place_data = event_data["place"]
         place = await self.place_repo.get(place_data["id"])
