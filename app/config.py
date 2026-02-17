@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from typing import Optional
+from urllib.parse import urlparse
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -14,7 +15,7 @@ class Settings(BaseSettings):
     POSTGRES_HOST: str
     POSTGRES_PASSWORD: str
     POSTGRES_PORT: int
-    POSTGRES_USER: str
+    POSTGRES_USER: Optional[str] = None
 
     POSTGRES_CONNECTION_STRING: Optional[str] = None
 
@@ -30,6 +31,18 @@ class Settings(BaseSettings):
                 f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
                 f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DATABASE_NAME}"
             )
+        else:
+            if not self.POSTGRES_USER:
+                parsed = urlparse(self.POSTGRES_CONNECTION_STRING)
+                self.POSTGRES_USER = parsed.username
+                if not self.POSTGRES_PASSWORD:
+                    self.POSTGRES_PASSWORD = parsed.password
+                if not self.POSTGRES_HOST:
+                    self.POSTGRES_HOST = parsed.hostname
+                if not self.POSTGRES_PORT:
+                    self.POSTGRES_PORT = parsed.port or 5432
+                if not self.POSTGRES_DATABASE_NAME:
+                    self.POSTGRES_DATABASE_NAME = parsed.path.lstrip('/')
 
 
 if os.getenv("DOCKER_ENV") == "true":

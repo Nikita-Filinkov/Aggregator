@@ -54,7 +54,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     env:
-      HEALTH_URL: ${{ secrets.HEALTH_URL }}
+      BASE_URL: ${{ secrets.BASE_URL }}
     steps:
       - name: Send deploy request
         run: |
