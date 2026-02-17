@@ -19,9 +19,9 @@ async def lifespan(app: FastAPI):
     logger.info("🛑 Приложение останавливается...")
 
 
-app = FastAPI(prefix="/api", lifespan=lifespan)
+app = FastAPI(lifespan=lifespan)
 
-app.include_router(router_health)
-app.include_router(router_sync)
-app.include_router(event_router)
-app.include_router(router_tickets)
+app.include_router(router_health, prefix="/api")
+app.include_router(router_sync, prefix="/api")
+app.include_router(event_router, prefix="/api")
+app.include_router(router_tickets, prefix="/api")

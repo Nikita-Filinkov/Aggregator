@@ -9,7 +9,7 @@ router = APIRouter(
 )
 
 
-@router.get("/")
+@router.get("")
 async def health_check(client=Depends(get_provider_client)) -> Dict[str, Any]:
     async with client:
         return await client.check_availability()

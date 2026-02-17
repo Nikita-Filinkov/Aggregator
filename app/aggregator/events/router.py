@@ -18,7 +18,7 @@ from app.provider.client import EventsProviderClient
 router = APIRouter(prefix="/events", tags=["events"])
 
 
-@router.get("/", response_model=EventListResponse)
+@router.get("", response_model=EventListResponse)
 async def list_events(
     params: EventListParams = Depends(),
     event_repo: EventRepository = Depends(get_event_repo),

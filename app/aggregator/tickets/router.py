@@ -16,7 +16,7 @@ from app.aggregator.tickets.usecase import CreateTicketUsecase, CancelTicketUsec
 router = APIRouter(prefix="/tickets", tags=["tickets"])
 
 
-@router.post("/", response_model=TicketCreateResponse, status_code=201)
+@router.post("", response_model=TicketCreateResponse, status_code=201)
 async def registration_on_event(
     params: TicketCreateRequest,
     client: EventsProviderClient = Depends(get_provider_client),
