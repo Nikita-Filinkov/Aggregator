@@ -42,7 +42,7 @@ class Settings(BaseSettings):
                 if not self.POSTGRES_PORT:
                     self.POSTGRES_PORT = parsed.port or 5432
                 if not self.POSTGRES_DATABASE_NAME:
-                    self.POSTGRES_DATABASE_NAME = parsed.path.lstrip('/')
+                    self.POSTGRES_DATABASE_NAME = parsed.path.lstrip("/")
 
 
 if os.getenv("DOCKER_ENV") == "true":

@@ -8,6 +8,7 @@ from app.aggregator.events.router import router as event_router
 from app.aggregator.tickets.router import router as router_tickets
 from app.logger import logger
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("🔥 Приложение запускается...")

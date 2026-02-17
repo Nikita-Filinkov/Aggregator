@@ -1,6 +1,10 @@
 FROM python:3.11-slim
 
-RUN mkdir /aggregator
+RUN mkdir /aggregator && \
+    addgroup --system --gid 1000 appuser && \
+    adduser --system --uid 1000 --ingroup appuser appuser && \
+    chown -R appuser:appuser /aggregator
+
 
 WORKDIR /aggregator
 
@@ -14,10 +18,6 @@ COPY . .
 ENV PATH="/aggregator/.venv/bin:$PATH"
 
 RUN chmod a+x /aggregator/docker/*.sh
-
-RUN addgroup --system --gid 1000 appuser && \
-    adduser --system --uid 1000 --ingroup appuser appuser && \
-    chown -R appuser:appuser /aggregator
 
 USER appuser
 
