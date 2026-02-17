@@ -26,23 +26,16 @@ class Settings(BaseSettings):
 
     def __init__(self, **data):
         super().__init__(**data)
-        if not self.POSTGRES_CONNECTION_STRING:
+        if self.POSTGRES_CONNECTION_STRING:
+            if self.POSTGRES_CONNECTION_STRING.startswith('postgres://'):
+                self.POSTGRES_CONNECTION_STRING = self.POSTGRES_CONNECTION_STRING.replace(
+                    'postgres://', 'postgresql+asyncpg://', 1
+                )
+        else:
             self.POSTGRES_CONNECTION_STRING = (
                 f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
                 f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DATABASE_NAME}"
             )
-        else:
-            if not self.POSTGRES_USER:
-                parsed = urlparse(self.POSTGRES_CONNECTION_STRING)
-                self.POSTGRES_USER = parsed.username
-                if not self.POSTGRES_PASSWORD:
-                    self.POSTGRES_PASSWORD = parsed.password
-                if not self.POSTGRES_HOST:
-                    self.POSTGRES_HOST = parsed.hostname
-                if not self.POSTGRES_PORT:
-                    self.POSTGRES_PORT = parsed.port or 5432
-                if not self.POSTGRES_DATABASE_NAME:
-                    self.POSTGRES_DATABASE_NAME = parsed.path.lstrip("/")
 
 
 if os.getenv("DOCKER_ENV") == "true":
