@@ -7,12 +7,14 @@ from app.provider.client import EventsProviderError, EventsProviderClient
 
 
 @pytest.mark.asyncio
-async def test_get_events_page_success(patched_client, mock_session, mock_response_factory):
+async def test_get_events_page_success(
+    patched_client, mock_session, mock_response_factory
+):
     """Успешное получение страницы событий по параметру changed_at"""
     json_response = {
         "next": "https://test.events-provider.com/api/events/?cursor=xyz",
         "previous": None,
-        "results": [{"id": "event1"}]
+        "results": [{"id": "event1"}],
     }
     mock_response = mock_response_factory(status=200, json_data=json_response)
     mock_session.request.return_value = mock_response
@@ -23,12 +25,14 @@ async def test_get_events_page_success(patched_client, mock_session, mock_respon
     mock_session.request.assert_called_once_with(
         "GET",
         "https://test.events-provider.com/api/events/",
-        params={"changed_at": "2020-01-01"}
+        params={"changed_at": "2020-01-01"},
     )
 
 
 @pytest.mark.asyncio
-async def test_get_events_page_with_url(patched_client, mock_session, mock_response_factory):
+async def test_get_events_page_with_url(
+    patched_client, mock_session, mock_response_factory
+):
     """Получение страницы по-полному URL (следующая страница)"""
     mock_response = mock_response_factory(status=200, json_data={"results": []})
     mock_session.request.return_value = mock_response
@@ -37,29 +41,32 @@ async def test_get_events_page_with_url(patched_client, mock_session, mock_respo
     await patched_client.get_events_page(url=url)
 
     mock_session.request.assert_called_once_with(
-        "GET",
-        url,
-        params={"changed_at": "2000-01-01"}
+        "GET", url, params={"changed_at": "2000-01-01"}
     )
 
 
 @pytest.mark.asyncio
-async def test_get_event_seats_success(patched_client, mock_session, mock_response_factory):
+async def test_get_event_seats_success(
+    patched_client, mock_session, mock_response_factory
+):
     """Успешное получение списка свободных мест"""
-    mock_response = mock_response_factory(status=200, json_data={"seats": ["A1", "A2", "B3"]})
+    mock_response = mock_response_factory(
+        status=200, json_data={"seats": ["A1", "A2", "B3"]}
+    )
     mock_session.request.return_value = mock_response
 
     seats = await patched_client.get_event_seats("event-123")
 
     assert seats == ["A1", "A2", "B3"]
     mock_session.request.assert_called_once_with(
-        "GET",
-        "https://test.events-provider.com/api/events/event-123/seats/"
+        "GET", "https://test.events-provider.com/api/events/event-123/seats/"
     )
 
 
 @pytest.mark.asyncio
-async def test_get_event_seats_empty(patched_client, mock_session, mock_response_factory):
+async def test_get_event_seats_empty(
+    patched_client, mock_session, mock_response_factory
+):
     """Если API вернул пустой объект (нет ключа seats), возвращаем пустой список"""
     mock_response = mock_response_factory(status=200, json_data={})
     mock_session.request.return_value = mock_response
@@ -75,17 +82,22 @@ async def test_unregister_success(patched_client, mock_session, mock_response_fa
     mock_response = mock_response_factory(status=200, json_data={"success": True})
     mock_session.request.return_value = mock_response
 
-    result = await patched_client.unregister(event_id="event-123", ticket_id="ticket-123")
+    result = await patched_client.unregister(
+        event_id="event-123", ticket_id="ticket-123"
+    )
 
     assert result == {"success": True}
     mock_session.request.assert_called_once_with(
         "DELETE",
         "https://test.events-provider.com/api/events/event-123/unregister/",
-        json={"ticket_id": "ticket-123"}
+        json={"ticket_id": "ticket-123"},
     )
 
+
 @pytest.mark.asyncio
-async def test_retry_on_server_error(patched_client, mock_session, mock_response_factory):
+async def test_retry_on_server_error(
+    patched_client, mock_session, mock_response_factory
+):
     """При ошибке 500 клиент должен повторить запрос"""
     mock_response_500 = mock_response_factory(status=500)
     mock_response_200 = mock_response_factory(status=200, json_data={"seats": ["A1"]})
@@ -98,7 +110,9 @@ async def test_retry_on_server_error(patched_client, mock_session, mock_response
 
 
 @pytest.mark.asyncio
-async def test_max_retries_exceeded(patched_client, mock_session, mock_response_factory):
+async def test_max_retries_exceeded(
+    patched_client, mock_session, mock_response_factory
+):
     """Превышение числа попыток – выбрасывается исключение"""
     mock_response = mock_response_factory(status=500)
     mock_session.request.return_value = mock_response
@@ -119,13 +133,13 @@ def test_register_success(client, mock_sync_session):
 
     mock_sync_session.post.return_value = mock_response
 
-    with patch.object(client, '_sync_session', mock_sync_session):
+    with patch.object(client, "_sync_session", mock_sync_session):
         result = client.register(
             event_id="event-123",
             first_name="Иван",
             last_name="Иванов",
             email="ivan@example.com",
-            seat="A15"
+            seat="A15",
         )
 
     assert result == {"ticket_id": "ticket-123"}
@@ -136,8 +150,8 @@ def test_register_success(client, mock_sync_session):
             "first_name": "Иван",
             "last_name": "Иванов",
             "email": "ivan@example.com",
-            "seat": "A15"
-        }
+            "seat": "A15",
+        },
     )
 
 
@@ -149,14 +163,14 @@ def test_register_error(client, mock_sync_session):
 
     mock_sync_session.post.return_value = mock_response
 
-    with patch.object(client, '_sync_session', mock_sync_session):
+    with patch.object(client, "_sync_session", mock_sync_session):
         with pytest.raises(EventsProviderError) as exc_info:
             client.register(
                 event_id="event-123",
                 first_name="Иван",
                 last_name="Иванов",
                 email="ivan@example.com",
-                seat="A15"
+                seat="A15",
             )
 
     assert exc_info.value.status == 400

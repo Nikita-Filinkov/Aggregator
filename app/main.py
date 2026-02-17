@@ -31,6 +31,7 @@ async def validation_exception_handler(request, exc):
         content={"detail": exc.errors()},
     )
 
+
 app.include_router(router_health, prefix="/api")
 app.include_router(router_sync, prefix="/api")
 app.include_router(event_router, prefix="/api")

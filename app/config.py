@@ -27,9 +27,11 @@ class Settings(BaseSettings):
     def __init__(self, **data):
         super().__init__(**data)
         if self.POSTGRES_CONNECTION_STRING:
-            if self.POSTGRES_CONNECTION_STRING.startswith('postgres://'):
-                self.POSTGRES_CONNECTION_STRING = self.POSTGRES_CONNECTION_STRING.replace(
-                    'postgres://', 'postgresql+asyncpg://', 1
+            if self.POSTGRES_CONNECTION_STRING.startswith("postgres://"):
+                self.POSTGRES_CONNECTION_STRING = (
+                    self.POSTGRES_CONNECTION_STRING.replace(
+                        "postgres://", "postgresql+asyncpg://", 1
+                    )
                 )
         else:
             self.POSTGRES_CONNECTION_STRING = (
