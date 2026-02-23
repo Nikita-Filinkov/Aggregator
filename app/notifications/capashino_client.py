@@ -19,7 +19,9 @@ class CapashinoClient:
             )
         return self._session
 
-    async def send_notification(self, message: str, reference_id: str, idempotency_key: str) -> bool:
+    async def send_notification(
+        self, message: str, reference_id: str, idempotency_key: str
+    ) -> bool:
         """Отправить уведомление"""
         url = f"{self.base_url}/api/notifications"
         payload = {
@@ -34,7 +36,9 @@ class CapashinoClient:
                     return True
                 else:
                     # Расширить обработку ошибок
-                    logger.error(f"Capashino error: {resp.status} - {await resp.text()}")
+                    logger.error(
+                        f"Capashino error: {resp.status} - {await resp.text()}"
+                    )
                     return False
         except Exception:
             logger.exception("Capashino request failed")

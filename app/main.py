@@ -21,8 +21,7 @@ async def lifespan(app: FastAPI):
     logger.info("🔥 Приложение запускается...")
     start_scheduler()
     capashino_client = CapashinoClient(
-        api_key=settings.LMS_API_KEY,
-        base_url=settings.CAPASHINO_BASE_URL
+        api_key=settings.LMS_API_KEY, base_url=settings.CAPASHINO_BASE_URL
     )
 
     worker = OutboxWorker(

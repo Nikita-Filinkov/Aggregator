@@ -110,8 +110,7 @@ class CreateTicketUsecase:
         }
 
         await self.outbox_repo.create(
-            event_type="ticket_created",
-            payload=outbox_payload
+            event_type="ticket_created", payload=outbox_payload
         )
 
         await self.ticket_repo.session.commit()

@@ -14,7 +14,7 @@ class OutboxWorker:
         batch_size: int = 10,
         poll_interval: int = 5,
         max_retries: int = 5,
-        days_to_keep: int = 7
+        days_to_keep: int = 7,
     ):
 
         self.capashino_client = capashino_client
@@ -48,9 +48,13 @@ class OutboxWorker:
             for outbox in pending:
                 await self._process_outbox_record(repo, outbox)
 
-            count_deleted_tasks = await repo.count_deleted_tasks(days_to_keep=self.days_to_keep)
+            count_deleted_tasks = await repo.count_deleted_tasks(
+                days_to_keep=self.days_to_keep
+            )
             if count_deleted_tasks > 0:
-                logger.info(f"Отчищено {count_deleted_tasks} сообщений старше {self.days_to_keep} дней")
+                logger.info(
+                    f"Отчищено {count_deleted_tasks} сообщений старше {self.days_to_keep} дней"
+                )
 
             await session.commit()
             break
@@ -62,10 +66,15 @@ class OutboxWorker:
         if outbox.retry_count >= self.max_retries:
             extra = {
                 "ticket": ticket,
-                "status": outbox.status.value if hasattr(outbox.status, 'value') else outbox.status,
-                "max_retry": outbox.retry_count
+                "status": outbox.status.value
+                if hasattr(outbox.status, "value")
+                else outbox.status,
+                "max_retry": outbox.retry_count,
             }
-            logger.error(f"У записи {outbox.id} было достигнуто максимальное количество попыток", extra=extra)
+            logger.error(
+                f"У записи {outbox.id} было достигнуто максимальное количество попыток",
+                extra=extra,
+            )
             await repo.mark_failed(outbox.id)
             return
 
@@ -75,7 +84,7 @@ class OutboxWorker:
             success = await self.capashino_client.send_notification(
                 message=message,
                 reference_id=ticket,
-                idempotency_key=f"outbox_{outbox.id}"
+                idempotency_key=f"outbox_{outbox.id}",
             )
 
             if success:
@@ -83,8 +92,10 @@ class OutboxWorker:
                 logger.info(f"Outbox record {outbox.id} sent")
             else:
                 await repo.increment_retry(outbox.id)
-                logger.warning(f"Outbox record {outbox.id} send failed, retry {outbox.retry_count + 1}")
+                logger.warning(
+                    f"Outbox record {outbox.id} send failed, retry {outbox.retry_count + 1}"
+                )
 
-        except Exception as e:
+        except Exception:
             logger.exception(f"Ошибка при отправке уведомления для записи {outbox.id}")
             await repo.increment_retry(outbox.id)

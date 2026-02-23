@@ -61,9 +61,10 @@ class OutboxRepository:
         """Удаляет отправленные сообщения старше days_to_keep дней"""
         cutoff_date = datetime.now() - timedelta(days=days_to_keep)
 
-        count_query = select(func.count()).select_from(Outbox).where(
-            Outbox.status == OutboxStatus.SENT,
-            Outbox.created_at < cutoff_date
+        count_query = (
+            select(func.count())
+            .select_from(Outbox)
+            .where(Outbox.status == OutboxStatus.SENT, Outbox.created_at < cutoff_date)
         )
         to_delete = await self.session.scalar(count_query) or 0
 
@@ -76,4 +77,3 @@ class OutboxRepository:
             await self.session.flush()
 
         return to_delete
-
