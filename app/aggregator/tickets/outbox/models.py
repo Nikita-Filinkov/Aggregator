@@ -1,10 +1,12 @@
+import enum
 import uuid
 from datetime import datetime
-from sqlalchemy import String, JSON, DateTime, Enum, Index, func
+
+from sqlalchemy import JSON, DateTime, Enum, Index, String, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
+
 from app.database import Base
-import enum
 
 
 class OutboxStatus(str, enum.Enum):
