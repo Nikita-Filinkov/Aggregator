@@ -19,9 +19,7 @@ class Outbox(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
-    event_type: Mapped[str] = mapped_column(
-        String(50), nullable=False
-    )
+    event_type: Mapped[str] = mapped_column(String(50), nullable=False)
     payload: Mapped[dict] = mapped_column(JSON, nullable=False)
     status: Mapped[OutboxStatus] = mapped_column(
         Enum(OutboxStatus), default=OutboxStatus.PENDING, index=True
