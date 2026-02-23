@@ -23,7 +23,6 @@ class TicketRepository:
         """Сохранение ticket в БД"""
         self.session.add(ticket)
         await self.session.flush()
-        await self.session.commit()
 
     async def delete_by_ticket_id(self, ticket_id: str, event_id: str) -> None:
         """Удаление билета по его ticket_id"""

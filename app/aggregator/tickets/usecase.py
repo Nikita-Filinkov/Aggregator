@@ -16,6 +16,7 @@ from app.aggregator.exceptions import (
     TicketUnRegistrationError,
 )
 from app.aggregator.tickets.models import Ticket
+from app.aggregator.tickets.outbox.repository import OutboxRepository
 from app.aggregator.tickets.repository import TicketRepository
 from app.provider.client import EventsProviderClient
 from app.provider.exceptions import EventsProviderError
@@ -27,10 +28,12 @@ class CreateTicketUsecase:
         client: EventsProviderClient,
         event_repo: EventRepository,
         ticket_repo: TicketRepository,
+        outbox_repo: OutboxRepository,
     ):
         self.client = client
         self.event_repo = event_repo
         self.ticket_repo = ticket_repo
+        self.outbox_repo = outbox_repo
 
     async def execute(
         self,
@@ -96,6 +99,22 @@ class CreateTicketUsecase:
             email=email,
         )
         await self.ticket_repo.save(ticket)
+
+        outbox_payload = {
+            "ticket_id": str(ticket.ticket_id),
+            "event_id": str(event_id),
+            "first_name": first_name,
+            "last_name": last_name,
+            "email": email,
+            "seat": seat,
+        }
+
+        await self.outbox_repo.create(
+            event_type="ticket_created",
+            payload=outbox_payload
+        )
+
+        await self.ticket_repo.session.commit()
 
         return ticket_id
 

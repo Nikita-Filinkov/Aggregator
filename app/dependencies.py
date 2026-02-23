@@ -40,3 +40,15 @@ async def get_ticket_repo(
     session: AsyncSession = Depends(get_async_db),
 ) -> TicketRepository:
     return TicketRepository(session)
+
+
+# async def get_outbox_repo(
+#     session: AsyncSession = Depends(get_async_db),
+# ) -> OutboxRepository:
+#     return OutboxRepository(session)
+
+
+# async def get_idempotency_repo(
+#     session: AsyncSession = Depends(get_async_db),
+# ) -> IdempotencyRepository:
+#     return IdempotencyRepository(session)

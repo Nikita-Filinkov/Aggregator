@@ -18,6 +18,8 @@ class Settings(BaseSettings):
 
     POSTGRES_CONNECTION_STRING: Optional[str] = None
 
+    CAPASHINO_BASE_URL: str = "https://capashino.dev-1.python-labs.ru"
+
     model_config = SettingsConfigDict(
         env_file_encoding="utf-8",
         extra="ignore",
