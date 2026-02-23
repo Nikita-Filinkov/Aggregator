@@ -18,6 +18,8 @@ services:
     restart: unless-stopped
     depends_on:
       - postgres
+#    environment:
+#      - DOCKER_ENV=true
     env_file:
       - .env.local
     ports:

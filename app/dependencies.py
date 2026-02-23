@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.aggregator.events.repository import EventRepository
 from app.aggregator.places.repository import PlaceRepository
+from app.aggregator.tickets.outbox.repository import OutboxRepository
 from app.aggregator.tickets.repository import TicketRepository
 from app.config import settings
 from app.database import get_async_db
@@ -42,10 +43,10 @@ async def get_ticket_repo(
     return TicketRepository(session)
 
 
-# async def get_outbox_repo(
-#     session: AsyncSession = Depends(get_async_db),
-# ) -> OutboxRepository:
-#     return OutboxRepository(session)
+async def get_outbox_repo(
+    session: AsyncSession = Depends(get_async_db),
+) -> OutboxRepository:
+    return OutboxRepository(session)
 
 
 # async def get_idempotency_repo(

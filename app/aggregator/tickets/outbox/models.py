@@ -30,7 +30,7 @@ class Outbox(Base):
         DateTime(timezone=True), server_default=func.now()
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), onupdate=func.now()
+        DateTime(timezone=True), onupdate=func.now(), server_default=func.now()
     )
     retry_count: Mapped[int] = mapped_column(default=0)
 

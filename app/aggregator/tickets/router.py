@@ -3,6 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends
 
 from app.aggregator.events.repository import EventRepository
+from app.aggregator.tickets.outbox.repository import OutboxRepository
 from app.aggregator.tickets.repository import TicketRepository
 from app.aggregator.tickets.schemas import (
     TicketCancelResponse,
@@ -10,7 +11,12 @@ from app.aggregator.tickets.schemas import (
     TicketCreateResponse,
 )
 from app.aggregator.tickets.usecase import CancelTicketUsecase, CreateTicketUsecase
-from app.dependencies import get_event_repo, get_provider_client, get_ticket_repo
+from app.dependencies import (
+    get_event_repo,
+    get_outbox_repo,
+    get_provider_client,
+    get_ticket_repo,
+)
 from app.provider.client import EventsProviderClient
 
 router = APIRouter(prefix="/tickets", tags=["tickets"])
@@ -22,9 +28,10 @@ async def registration_on_event(
     client: EventsProviderClient = Depends(get_provider_client),
     event_repo: EventRepository = Depends(get_event_repo),
     ticket_repo: TicketRepository = Depends(get_ticket_repo),
+    outbox_repo: OutboxRepository = Depends(get_outbox_repo),
 ):
     """Регистрация на событие и получение билета"""
-    usecase = CreateTicketUsecase(client, event_repo, ticket_repo)
+    usecase = CreateTicketUsecase(client, event_repo, ticket_repo, outbox_repo)
     ticket_id = await usecase.execute(
         event_id=params.event_id,
         first_name=params.first_name,
