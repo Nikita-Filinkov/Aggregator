@@ -26,7 +26,10 @@ async def lifespan(app: FastAPI):
 
     worker = OutboxWorker(
         capashino_client=capashino_client,
-        poll_interval=10,
+        batch_size=settings.BATCH_SIZE_OUTBOX_TASKS,
+        poll_interval=settings.POLL_INTERVAL_OUTBOX,
+        max_retries=settings.MAX_RETRIES_OUTBOX,
+        days_to_keep=settings.DAYS_TO_KEEP,
     )
     task = asyncio.create_task(worker.start())
 
