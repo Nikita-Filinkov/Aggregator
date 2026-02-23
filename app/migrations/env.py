@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from app.aggregator.events.models import Event  # noqa
 from app.aggregator.places.models import Place  # noqa
 from app.aggregator.tickets.models import Ticket  # noqa
+from app.aggregator.tickets.outbox.models import Outbox  # noqa
 from app.config import settings
 from app.database import Base
 from app.sync.models import SyncMetadata  # noqa
