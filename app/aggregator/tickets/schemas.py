@@ -18,8 +18,8 @@ class TicketCreateRequest(BaseModel):
     )
     idempotency_key: Optional[str] = Field(
         None,
-        min_length=10,
-        max_length=20,
+        min_length=1,
+        max_length=255,
         description="Ключ идемпотентности для предотвращения не желательных повторов",
     )
 
