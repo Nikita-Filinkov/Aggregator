@@ -3,6 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends
 
 from app.aggregator.events.repository import EventRepository
+from app.aggregator.tickets.idempotency.repository import IdempotencyRepository
 from app.aggregator.tickets.outbox.repository import OutboxRepository
 from app.aggregator.tickets.repository import TicketRepository
 from app.aggregator.tickets.schemas import (
@@ -13,6 +14,7 @@ from app.aggregator.tickets.schemas import (
 from app.aggregator.tickets.usecase import CancelTicketUsecase, CreateTicketUsecase
 from app.dependencies import (
     get_event_repo,
+    get_idempotency_repo,
     get_outbox_repo,
     get_provider_client,
     get_ticket_repo,
@@ -29,15 +31,23 @@ async def registration_on_event(
     event_repo: EventRepository = Depends(get_event_repo),
     ticket_repo: TicketRepository = Depends(get_ticket_repo),
     outbox_repo: OutboxRepository = Depends(get_outbox_repo),
+    idempotency_repo: IdempotencyRepository = Depends(get_idempotency_repo),
 ):
-    """Регистрация на событие и получение билета"""
-    usecase = CreateTicketUsecase(client, event_repo, ticket_repo, outbox_repo)
+    """Создание нового билета (регистрация на событие).
+
+    - **idempotency_key** (опционально): ключ идемпотентности для защиты от дублирования запросов.
+      Если ключ уже был использован с теми же данными, возвращается сохранённый ticket_id (201).
+      Если ключ уже был использован, но данные отличаются, возвращается 409 Conflict."""
+    usecase = CreateTicketUsecase(
+        client, event_repo, ticket_repo, outbox_repo, idempotency_repo
+    )
     ticket_id = await usecase.execute(
         event_id=params.event_id,
         first_name=params.first_name,
         last_name=params.last_name,
         email=params.email,
         seat=params.seat,
+        idempotency_key=params.idempotency_key,
     )
     return TicketCreateResponse(ticket_id=ticket_id)
 

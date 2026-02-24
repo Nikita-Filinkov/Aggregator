@@ -1,3 +1,4 @@
+from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, Field
@@ -14,6 +15,12 @@ class TicketCreateRequest(BaseModel):
         max_length=10,
         description="Схема мест в формате: секция{номер места}",
         examples=["A1-1000", "B1-2000", "C1-3000"],
+    )
+    idempotency_key: Optional[str] = Field(
+        None,
+        min_length=10,
+        max_length=20,
+        description="Ключ идемпотентности для предотвращения не желательных повторов",
     )
 
 

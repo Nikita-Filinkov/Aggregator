@@ -1,5 +1,6 @@
 import asyncio
 from datetime import datetime, timezone
+from typing import Optional
 from uuid import UUID
 
 from aiohttp import ClientConnectorError
@@ -15,6 +16,11 @@ from app.aggregator.exceptions import (
     TicketNotFoundException,
     TicketUnRegistrationError,
 )
+from app.aggregator.tickets.idempotency.exeptions import (
+    DontConsistentData,
+    IdemDontHaveTicket,
+)
+from app.aggregator.tickets.idempotency.repository import IdempotencyRepository
 from app.aggregator.tickets.models import Ticket
 from app.aggregator.tickets.outbox.repository import OutboxRepository
 from app.aggregator.tickets.repository import TicketRepository
@@ -29,11 +35,13 @@ class CreateTicketUsecase:
         event_repo: EventRepository,
         ticket_repo: TicketRepository,
         outbox_repo: OutboxRepository,
+        idempotency_repo: IdempotencyRepository,
     ):
         self.client = client
         self.event_repo = event_repo
         self.ticket_repo = ticket_repo
         self.outbox_repo = outbox_repo
+        self.idempotency_repo = idempotency_repo
 
     async def execute(
         self,
@@ -42,7 +50,36 @@ class CreateTicketUsecase:
         last_name: str,
         email: str,
         seat: str,
+        idempotency_key: Optional[str] = None,
     ) -> UUID:
+
+        input_params = {
+            "event_id": str(event_id),
+            "first_name": first_name,
+            "last_name": last_name,
+            "email": email,
+            "seat": seat,
+        }
+
+        if idempotency_key:
+            existing = await self.idempotency_repo.get(idempotency_key)
+            if existing:
+                saved = existing.response_data
+
+                if (
+                    saved.get("event_id") != input_params["event_id"]
+                    or saved.get("seat") != input_params["seat"]
+                    or saved.get("email") != input_params["email"]
+                    or saved.get("first_name") != input_params["first_name"]
+                    or saved.get("last_name") != input_params["last_name"]
+                ):
+                    raise DontConsistentData
+
+                ticket_id_str = saved.get("ticket_id")
+                if not ticket_id_str:
+                    raise IdemDontHaveTicket
+
+                return UUID(ticket_id_str)
 
         event = await self.event_repo.get(str(event_id))
         if not event:
@@ -89,7 +126,11 @@ class CreateTicketUsecase:
         if not ticket_id_str:
             raise TicketUnRegistrationError("Неверный ответ от провайдера")
 
-        ticket_id = UUID(ticket_id_str)
+        ticket_data = input_params.copy()
+        ticket_data["ticket_id"] = ticket_id_str
+
+        ticket_id: UUID = UUID(ticket_id_str)
+
         ticket = Ticket(
             ticket_id=ticket_id,
             event_id=event_id,
@@ -98,20 +139,17 @@ class CreateTicketUsecase:
             last_name=last_name,
             email=email,
         )
+
         await self.ticket_repo.save(ticket)
 
-        outbox_payload = {
-            "ticket_id": str(ticket.ticket_id),
-            "event_id": str(event_id),
-            "first_name": first_name,
-            "last_name": last_name,
-            "email": email,
-            "seat": seat,
-        }
+        outbox_payload = ticket_data
 
         await self.outbox_repo.create(
             event_type="ticket_created", payload=outbox_payload
         )
+
+        if idempotency_key:
+            await self.idempotency_repo.save(idempotency_key, ticket_data)
 
         await self.ticket_repo.session.commit()
 

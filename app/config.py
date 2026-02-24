@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     POLL_INTERVAL_OUTBOX: int = 5
     MAX_RETRIES_OUTBOX: int = 5
     DAYS_TO_KEEP: int = 7
+    TTL_DAYS_IDM_KEYS: int = 7
 
     model_config = SettingsConfigDict(
         env_file_encoding="utf-8",

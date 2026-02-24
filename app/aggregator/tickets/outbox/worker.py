@@ -66,9 +66,7 @@ class OutboxWorker:
         if outbox.retry_count >= self.max_retries:
             extra = {
                 "ticket": ticket,
-                "status": outbox.status.value
-                if hasattr(outbox.status, "value")
-                else outbox.status,
+                "status": outbox.status,
                 "max_retry": outbox.retry_count,
             }
             logger.error(
