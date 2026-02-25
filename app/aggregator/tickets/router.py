@@ -20,6 +20,8 @@ from app.dependencies import (
     get_ticket_repo,
 )
 from app.provider.client import EventsProviderClient
+from app.sync.deps import get_sync_usecase
+from app.sync.usecase import SyncEventsUsecase
 
 router = APIRouter(prefix="/tickets", tags=["tickets"])
 
@@ -28,6 +30,7 @@ router = APIRouter(prefix="/tickets", tags=["tickets"])
 async def registration_on_event(
     params: TicketCreateRequest,
     client: EventsProviderClient = Depends(get_provider_client),
+    sync_events: SyncEventsUsecase = Depends(get_sync_usecase),
     event_repo: EventRepository = Depends(get_event_repo),
     ticket_repo: TicketRepository = Depends(get_ticket_repo),
     outbox_repo: OutboxRepository = Depends(get_outbox_repo),
@@ -39,7 +42,7 @@ async def registration_on_event(
       Если ключ уже был использован с теми же данными, возвращается сохранённый ticket_id (201).
       Если ключ уже был использован, но данные отличаются, возвращается 409 Conflict."""
     usecase = CreateTicketUsecase(
-        client, event_repo, ticket_repo, outbox_repo, idempotency_repo
+        client, sync_events, event_repo, ticket_repo, outbox_repo, idempotency_repo
     )
     ticket_id = await usecase.execute(
         event_id=params.event_id,

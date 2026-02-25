@@ -26,18 +26,21 @@ from app.aggregator.tickets.outbox.repository import OutboxRepository
 from app.aggregator.tickets.repository import TicketRepository
 from app.provider.client import EventsProviderClient
 from app.provider.exceptions import EventsProviderError
+from app.sync.usecase import SyncEventsUsecase
 
 
 class CreateTicketUsecase:
     def __init__(
         self,
         client: EventsProviderClient,
+        sync_events: SyncEventsUsecase,
         event_repo: EventRepository,
         ticket_repo: TicketRepository,
         outbox_repo: OutboxRepository,
         idempotency_repo: IdempotencyRepository,
     ):
         self.client = client
+        self.sync_events = sync_events
         self.event_repo = event_repo
         self.ticket_repo = ticket_repo
         self.outbox_repo = outbox_repo
@@ -80,6 +83,8 @@ class CreateTicketUsecase:
                     raise IdemDontHaveTicket
 
                 return UUID(ticket_id_str)
+
+        await self.sync_events.execute()
 
         event = await self.event_repo.get(str(event_id))
         if not event:
