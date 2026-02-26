@@ -18,6 +18,9 @@ class Settings(BaseSettings):
 
     POSTGRES_CONNECTION_STRING: Optional[str] = None
 
+    MAX_RETRIES: int = 3
+    BACKOFF_FACTOR: float = 0.5
+
     CAPASHINO_BASE_URL: str = "https://capashino.dev-1.python-labs.ru"
     BATCH_SIZE_OUTBOX_TASKS: int = 10
     POLL_INTERVAL_OUTBOX: int = 5

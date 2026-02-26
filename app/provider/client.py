@@ -1,14 +1,39 @@
 import asyncio
+import logging
 from typing import Any, Dict, List, Optional
 
 import requests
 from aiohttp import ClientConnectorError, ClientError, ClientSession, ClientTimeout
+from tenacity import (
+    before_sleep_log,
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
-from app.provider.exceptions import EventsProviderError
+from app.config import settings
+from app.logger import logger
+from app.provider.exceptions import EventsProviderError, ProviderTemporaryError
 
 
 class EventsProviderClient:
     """Асинхронный HTTP-клиент для Events Provider API"""
+
+    MAX_RETRIES = settings.MAX_RETRIES
+    BACKOFF_FACTOR = settings.BACKOFF_FACTOR
+    ASYNC_RETRY_EXCEPTIONS = (
+        ClientError,
+        asyncio.TimeoutError,
+        ConnectionError,
+        ProviderTemporaryError,
+    )
+    SYNC_RETRY_EXCEPTIONS = (
+        requests.ConnectionError,
+        requests.Timeout,
+        requests.RequestException,
+    )
+    RETRY_STATUSES = {408, 429, 500, 502, 503, 504}
 
     def __init__(self, api_key: str, base_url: str):
         self.api_key = api_key
@@ -19,19 +44,6 @@ class EventsProviderClient:
         self._sync_session = requests.Session()
         self._sync_session.headers.update(self.headers)
 
-        self.max_retries: int = 3
-        self.backoff_factor: float = 0.5
-        self.retry_exceptions: tuple = (
-            ClientError,
-            asyncio.TimeoutError,
-            ConnectionError,
-        )
-
-    async def _sleep_with_backoff(self, attempt: int):
-        """Экспоненциальная задержка перед повторной попыткой"""
-        delay = self.backoff_factor * (2**attempt)
-        await asyncio.sleep(delay)
-
     async def _get_session(self) -> ClientSession:
         """Создаёт или возвращает существующую сессию"""
         if self._session is None:
@@ -41,45 +53,36 @@ class EventsProviderClient:
             )
         return self._session
 
+    @retry(
+        stop=stop_after_attempt(MAX_RETRIES),
+        wait=wait_exponential(multiplier=BACKOFF_FACTOR, min=1, max=5),
+        retry=retry_if_exception_type(ASYNC_RETRY_EXCEPTIONS),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
     async def _request(
         self,
         method: str,
         url: str,
         **kwargs,
     ) -> Dict[str, Any]:
-        """
-        Выполняет HTTP-запрос с повторными попытками
-        """
+        """Выполняет HTTP-запрос с повторными попытками"""
         session = await self._get_session()
-        retry_statuses = {408, 429, 500, 502, 503, 504}
 
-        for attempt in range(self.max_retries + 1):
-            try:
-                async with session.request(method, url, **kwargs) as resp:
-                    status_code = resp.status
-                    if resp.status < 300:
-                        return await resp.json()
+        try:
+            async with session.request(method, url, **kwargs) as resp:
+                if resp.status < 300:
+                    return await resp.json()
 
-                    if 400 <= status_code < 500 and status_code not in retry_statuses:
-                        raise EventsProviderError(status_code, resp.reason)
+                if resp.status in self.RETRY_STATUSES or resp.status >= 500:
+                    raise ProviderTemporaryError(status=resp.status)
 
-                    if status_code in retry_statuses or status_code >= 500:
-                        if attempt == self.max_retries:
-                            raise EventsProviderError(status_code, resp.reason)
-                        await self._sleep_with_backoff(attempt)
-                        continue
-
-                    raise EventsProviderError(
-                        status=status_code,
-                        message=resp.reason or "Неожиданный статус",
-                    )
-            except self.retry_exceptions as e:
-                if attempt == self.max_retries:
-                    raise EventsProviderError(
-                        status=0,
-                        message=f"Ошибка сети после {self.max_retries} попыток: {e}",
-                    )
-                await self._sleep_with_backoff(attempt)
+                raise EventsProviderError(
+                    status=resp.status, message=f"Provider error: {resp.reason}"
+                )
+        except (ClientError, asyncio.TimeoutError, ConnectionError) as e:
+            message = "Ошибка при обращении к провайдеру"
+            logger.warning(message, extra={"tries": self.MAX_RETRIES, "error": str(e)})
+            raise ProviderTemporaryError(status=0, message=message)
 
     async def check_availability(self):
         """Проверка доступности API"""
@@ -108,11 +111,18 @@ class EventsProviderClient:
         data = await self._request("GET", url)
         return data.get("seats", [])
 
+    @retry(
+        stop=stop_after_attempt(MAX_RETRIES),
+        wait=wait_exponential(multiplier=BACKOFF_FACTOR, min=1, max=5),
+        retry=retry_if_exception_type(SYNC_RETRY_EXCEPTIONS),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
     def register(
         self, event_id: str, first_name: str, last_name: str, email: str, seat: str
     ) -> Dict[str, str]:
-        """Синхронная регистрация участника"""
+        """Синхронная регистрация участника с повторными попытками"""
         url = f"{self.base_url}/api/events/{event_id}/register/"
+
         payload = {
             "event_id": event_id,
             "first_name": first_name,
@@ -120,15 +130,28 @@ class EventsProviderClient:
             "email": email,
             "seat": seat,
         }
-        response = self._sync_session.post(url, json=payload)
 
-        if response.status_code < 300:
-            return response.json()
-        else:
-            raise EventsProviderError(
-                status=response.status_code,
-                message=f"Регистрация не выполнена (HTTP {response.status_code}):",
-            )
+        try:
+            response = self._sync_session.post(url, json=payload)
+            status = response.status_code
+
+            if status < 300:
+                return response.json()
+
+            elif status in self.RETRY_STATUSES or status >= 500:
+                raise ProviderTemporaryError(status=status)
+            else:
+                raise EventsProviderError(
+                    status=status, message=f"Ошибка провайдера: {response.reason}"
+                )
+
+        except (
+            requests.ConnectionError,
+            requests.Timeout,
+            requests.RequestException,
+        ) as e:
+            logger.warning("Ошибка сети при регистрации", extra={"error": str(e)})
+            raise ProviderTemporaryError(status=0, message="Network error") from e
 
     async def unregister(
         self,
