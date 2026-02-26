@@ -5,6 +5,13 @@ from app.aggregator.tickets.outbox.repository import OutboxRepository
 from app.database import get_async_db
 from app.logger import logger
 from app.notifications.capashino_client import CapashinoClient
+from app.notifications.exceptions import (
+    BadRequestNotificationException,
+    ExistsNotificationException,
+    NotificationServiceErrorException,
+    UnexpectedNotificationError,
+    WrongApiKeyNotificationException,
+)
 
 
 class OutboxWorker:
@@ -88,12 +95,17 @@ class OutboxWorker:
             if success:
                 await repo.mark_sent(outbox.id)
                 logger.info(f"Outbox record {outbox.id} sent")
-            else:
-                await repo.increment_retry(outbox.id)
-                logger.warning(
-                    f"Outbox record {outbox.id} send failed, retry {outbox.retry_count + 1}"
-                )
 
-        except Exception:
-            logger.exception(f"Ошибка при отправке уведомления для записи {outbox.id}")
+        except (NotificationServiceErrorException, UnexpectedNotificationError):
             await repo.increment_retry(outbox.id)
+            logger.warning(
+                f"Outbox record {outbox.id} send failed, retry {outbox.retry_count + 1}"
+            )
+
+        except (
+            ExistsNotificationException,
+            WrongApiKeyNotificationException,
+            BadRequestNotificationException,
+        ):
+            logger.warning(f"Ошибка при отправке уведомления для записи {outbox.id}")
+            await repo.mark_failed(outbox.id)

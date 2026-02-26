@@ -3,6 +3,13 @@ from typing import Optional
 from aiohttp import ClientSession
 
 from app.logger import logger
+from app.notifications.exceptions import (
+    BadRequestNotificationException,
+    ExistsNotificationException,
+    NotificationServiceErrorException,
+    UnexpectedNotificationError,
+    WrongApiKeyNotificationException,
+)
 
 
 class CapashinoClient:
@@ -32,17 +39,43 @@ class CapashinoClient:
         session = await self._get_session()
         try:
             async with session.post(url, json=payload) as resp:
-                if resp.status == 201:
+                status = resp.status
+
+                if status == 201:
                     return True
-                else:
-                    # Расширить обработку ошибок
+
+                elif status == 400:
                     logger.error(
-                        f"Capashino error: {resp.status} - {await resp.text()}"
+                        f"Нет reference_id, невалидное тело: {status} - {await resp.text()}"
                     )
-                    return False
+                    raise BadRequestNotificationException
+
+                elif status == 401:
+                    logger.error(
+                        f"Нет/неверный X-API-Key: {status} - {await resp.text()}"
+                    )
+                    raise WrongApiKeyNotificationException
+
+                elif status == 409:
+                    logger.error(
+                        f"Уже есть уведомление с таким idempotency_key: {status} - {await resp.text()}"
+                    )
+                    raise ExistsNotificationException
+
+                elif status >= 500:
+                    logger.error(
+                        f"Ошибка на стороне сервиса уведомлений: {status} - {await resp.text()}"
+                    )
+                    raise NotificationServiceErrorException
+
+                else:
+                    logger.error(f"Capashino error: {status} - {await resp.text()}")
+                    message = (
+                        "Неожиданная ошибка при отправке сообщения в сервис уведомлений"
+                    )
+                    raise UnexpectedNotificationError(status, message)
         except Exception:
-            logger.exception("Capashino request failed")
-            return False
+            raise
 
     async def close(self):
         if self._session:
