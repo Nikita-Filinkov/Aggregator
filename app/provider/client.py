@@ -84,6 +84,11 @@ class EventsProviderClient:
             logger.warning(message, extra={"tries": self.MAX_RETRIES, "error": str(e)})
             raise ProviderTemporaryError(status=0, message=message)
 
+        except EventsProviderError as e:
+            message = "Не известная ошибка при обращении к провайдеру"
+            logger.warning(message, extra={"tries": self.MAX_RETRIES, "error": str(e)})
+            raise
+
     async def check_availability(self):
         """Проверка доступности API"""
         session = await self._get_session()

@@ -79,3 +79,8 @@ class ProviderAPIError(AggregatorException):
 class ProviderUnexpectedResponse(AggregatorException):
     status_code = status.HTTP_502_BAD_GATEWAY
     detail = "Неожиданный ответ от провайдера"
+
+
+class FailedSyncEvent(AggregatorException):
+    status_code = status.HTTP_502_BAD_GATEWAY
+    detail = "Ошибка при попытке синхронизации"

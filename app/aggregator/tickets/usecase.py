@@ -4,16 +4,17 @@ from typing import Optional
 from uuid import UUID
 
 from aiohttp import ClientConnectorError
-from fastapi import HTTPException
 
 from app.aggregator.events.repository import EventRepository
 from app.aggregator.exceptions import (
     EventNotFoundException,
     EventNotPublished,
     EventPassed,
+    FailedSyncEvent,
     ProviderNetworkError,
     ProviderUnexpectedResponse,
     TicketNotFoundException,
+    TicketRegistrationError,
     TicketUnRegistrationError,
 )
 from app.aggregator.tickets.idempotency.exeptions import (
@@ -24,8 +25,9 @@ from app.aggregator.tickets.idempotency.repository import IdempotencyRepository
 from app.aggregator.tickets.models import Ticket
 from app.aggregator.tickets.outbox.repository import OutboxRepository
 from app.aggregator.tickets.repository import TicketRepository
+from app.logger import logger
 from app.provider.client import EventsProviderClient
-from app.provider.exceptions import EventsProviderError
+from app.provider.exceptions import EventsProviderError, ProviderTemporaryError
 from app.sync.usecase import SyncEventsUsecase
 
 
@@ -76,15 +78,37 @@ class CreateTicketUsecase:
                     or saved.get("first_name") != input_params["first_name"]
                     or saved.get("last_name") != input_params["last_name"]
                 ):
+                    logger.warning(
+                        "Ключ идемпотентности совпадает, но входные и сохранённые данные отличаются",
+                        extra={
+                            "idempotency_key": idempotency_key,
+                            "input_params": input_params,
+                            "saved_params": saved,
+                        },
+                    )
                     raise DontConsistentData
 
                 ticket_id_str = saved.get("ticket_id")
                 if not ticket_id_str:
+                    logger.exception(
+                        "Нет билета в таблице идемпотентности, хотя ключ идемпотентности есть",
+                        extra={
+                            "idempotency_key": idempotency_key,
+                            "input_params": input_params,
+                        },
+                    )
                     raise IdemDontHaveTicket
 
                 return UUID(ticket_id_str)
 
-        await self.sync_events.execute()
+        try:
+            await self.sync_events.execute()
+        except (ProviderTemporaryError, EventsProviderError) as e:
+            logger.exception(
+                "Ошибка при попытке синхронизировать данные перед регистрацией",
+                extra={"error": e},
+            )
+            raise FailedSyncEvent
 
         event = await self.event_repo.get(str(event_id))
         if not event:
@@ -105,8 +129,9 @@ class CreateTicketUsecase:
         except TicketUnRegistrationError:
             raise
 
-        except Exception:
-            raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
+        except Exception as e:
+            logger.error("Внутренняя ошибка сервера", extra={"error": e})
+            raise TicketRegistrationError(detail="Внутренняя ошибка сервера")
 
         try:
             response = await asyncio.to_thread(
@@ -124,8 +149,9 @@ class CreateTicketUsecase:
         except (ClientConnectorError, asyncio.TimeoutError):
             raise ProviderNetworkError()
 
-        except Exception:
-            raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
+        except Exception as e:
+            logger.error("Внутренняя ошибка сервера", extra={"error": e})
+            raise TicketRegistrationError(detail="Внутренняя ошибка сервера")
 
         ticket_id_str = response.get("ticket_id")
         if not ticket_id_str:
@@ -202,8 +228,9 @@ class CancelTicketUsecase:
         except (ClientConnectorError, asyncio.TimeoutError):
             raise ProviderNetworkError()
 
-        except Exception:
-            raise HTTPException(status_code=500, detail="Внутренняя ошибка сервера")
+        except Exception as e:
+            logger.error("Внутренняя ошибка сервера", extra={"error": e})
+            raise TicketRegistrationError(detail="Внутренняя ошибка сервера")
 
         await self.ticket_repo.delete_by_ticket_id(
             ticket_id=str(ticket_id), event_id=str(ticket.event_id)
