@@ -1,5 +1,3 @@
-
-
 class EventsProviderError(Exception):
     """Базовое исключение для ошибок API Events Provider"""
 
